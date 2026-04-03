@@ -684,6 +684,7 @@ async function translateAllEmpty() {
 // ===== 翻譯結束 =====
 
 
+function log(msg) { document.getElementById('progressLog').textContent = msg; }
 function setProgress(p) { document.getElementById('progressBar').style.width = p + '%'; }
 function showError(msg) { const e = document.getElementById('errorMsg'); e.textContent = msg; e.style.display = 'block'; }
 
