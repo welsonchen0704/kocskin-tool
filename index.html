@@ -451,22 +451,35 @@ function applyScriptToForm() {
     renderSlides();
   }
 
-  // 填入文案和 Prompt
-  setTimeout(() => {
+  // 填入文案和 Prompt，並自動將英文翻成中文填入左欄
+  setTimeout(async () => {
     const mains = document.querySelectorAll('.main-copy');
     const subs = document.querySelectorAll('.sub-copy');
     const prompts = document.querySelectorAll('.scene-prompt');
     for (let i = 1; i <= 5; i++) {
       if (mains[i-1]) mains[i-1].value = get(`第${i}張主文案`);
       if (subs[i-1]) subs[i-1].value = get(`第${i}張副文案`);
-      if (prompts[i-1]) prompts[i-1].value = get(`第${i}張Prompt`);
-      // 中文欄清空（英文 Prompt 已填入右欄，左欄供同事自行填中文備註）
+      const enPrompt = get(`第${i}張Prompt`);
+      if (prompts[i-1]) prompts[i-1].value = enPrompt;
+      // 左欄：自動翻譯英文 Prompt 成中文
       const zhEl = document.getElementById(`prompt-zh-${i-1}`);
-      if (zhEl) zhEl.value = '';
       const status = document.getElementById(`transStatus-${i-1}`);
-      if (status) status.textContent = '（已載入英文）';
+      if (zhEl && enPrompt) {
+        zhEl.value = '翻譯中...';
+        if (status) status.textContent = '⏳';
+        try {
+          const zh = await translateEnToZh(enPrompt);
+          zhEl.value = zh;
+          if (status) status.textContent = '✅ 已翻譯';
+        } catch(e) {
+          zhEl.value = '';
+          if (status) status.textContent = '❌ 翻譯失敗';
+        }
+      } else if (zhEl) {
+        zhEl.value = '';
+      }
     }
-    document.getElementById('notionMsg').textContent = '✅ 劇本已套用到表單！';
+    document.getElementById('notionMsg').textContent = '✅ 劇本已套用，中文說明翻譯完成！';
   }, 100);
 }
 // ===== Notion 串接結束 =====
@@ -609,6 +622,25 @@ async function translatePrompt(zhText) {
       messages: [{
         role: 'user',
         content: `Translate the following Chinese image generation scene description into English prompt for Gemini image generation. Output ONLY the translated English prompt, no explanation, no quotes, no preamble.\n\nChinese:\n${zhText}`
+      }]
+    })
+  });
+  if (!res.ok) throw new Error('翻譯 API 失敗');
+  const data = await res.json();
+  return (data.content || []).find(b => b.type === 'text')?.text?.trim() || '';
+}
+
+async function translateEnToZh(enText) {
+  if (!enText || !enText.trim()) return '';
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      messages: [{
+        role: 'user',
+        content: `將以下英文的圖片生成場景描述翻譯成繁體中文，讓非英語使用者能理解場景內容。只輸出翻譯結果，不要說明、不要引號、不要前言。\n\nEnglish:\n${enText}`
       }]
     })
   });
