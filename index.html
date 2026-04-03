@@ -611,42 +611,34 @@ async function getRefBase64s(i) {
 }
 
 // ===== 中文 → 英文翻譯（用 Claude API）=====
-async function translatePrompt(zhText) {
-  if (!zhText || !zhText.trim()) return '';
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+async function callGeminiText(prompt) {
+  const key = document.getElementById('apiKey').value.trim();
+  if (!key) throw new Error('請先填入 Gemini API Key');
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1000,
-      messages: [{
-        role: 'user',
-        content: `Translate the following Chinese image generation scene description into English prompt for Gemini image generation. Output ONLY the translated English prompt, no explanation, no quotes, no preamble.\n\nChinese:\n${zhText}`
-      }]
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { responseModalities: ['TEXT'] }
     })
   });
-  if (!res.ok) throw new Error('翻譯 API 失敗');
+  if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || '翻譯失敗'); }
   const data = await res.json();
-  return (data.content || []).find(b => b.type === 'text')?.text?.trim() || '';
+  return (data.candidates?.[0]?.content?.parts || []).find(p => p.text)?.text?.trim() || '';
+}
+
+async function translatePrompt(zhText) {
+  if (!zhText || !zhText.trim()) return '';
+  return await callGeminiText(
+    `Translate the following Chinese image generation scene description into English prompt for Gemini image generation. Output ONLY the translated English prompt, no explanation, no quotes, no preamble.\n\nChinese:\n${zhText}`
+  );
 }
 
 async function translateEnToZh(enText) {
   if (!enText || !enText.trim()) return '';
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1000,
-      messages: [{
-        role: 'user',
-        content: `將以下英文的圖片生成場景描述翻譯成繁體中文，讓非英語使用者能理解場景內容。只輸出翻譯結果，不要說明、不要引號、不要前言。\n\nEnglish:\n${enText}`
-      }]
-    })
-  });
-  if (!res.ok) throw new Error('翻譯 API 失敗');
-  const data = await res.json();
-  return (data.content || []).find(b => b.type === 'text')?.text?.trim() || '';
+  return await callGeminiText(
+    `將以下英文的圖片生成場景描述翻譯成繁體中文，讓非英語使用者能理解場景內容。只輸出翻譯結果，不要說明、不要引號、不要前言。\n\nEnglish:\n${enText}`
+  );
 }
 
 async function translateOne(i) {
