@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KOCSKIN 社群圖片生成器 v6</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;700;900&family=Noto+Serif+TC:wght@400;700&display=swap');
+  :root { --rose: #c9747a; --rose-light: #f5e8e8; --cream: #fdf6f0; --dark: #2a1f1f; --gray: #888; --border: #e8d5d5; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Noto Sans TC', sans-serif; background: var(--cream); color: var(--dark); min-height: 100vh; }
+  header { background: #fff; border-bottom: 1px solid var(--border); padding: 16px 40px; display: flex; align-items: center; gap: 16px; }
+  header .logo { font-size: 18px; font-weight: 900; letter-spacing: 3px; color: var(--rose); }
+  header .logo-zh { font-size: 11px; font-weight: 300; color: var(--gray); letter-spacing: 2px; }
+  header .divider { width: 1px; height: 28px; background: var(--border); }
+  header .title { font-size: 13px; color: var(--gray); }
+  .badge { display: inline-block; background: #4285f4; color: #fff; font-size: 10px; padding: 2px 8px; border-radius: 999px; margin-left: 6px; }
+  .container { max-width: 1000px; margin: 0 auto; padding: 32px 20px; }
+  .card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 28px; margin-bottom: 20px; }
+  .card h2 { font-size: 13px; font-weight: 700; letter-spacing: 2px; color: var(--rose); text-transform: uppercase; margin-bottom: 18px; display: flex; align-items: center; gap: 8px; }
+  .card h2::before { content: ''; width: 4px; height: 14px; background: var(--rose); border-radius: 2px; }
+  input[type="password"], input[type="text"], input[type="number"], textarea, select { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; font-family: 'Noto Sans TC', sans-serif; font-size: 13px; color: var(--dark); background: var(--cream); outline: none; transition: border-color 0.2s; }
+  input:focus, textarea:focus, select:focus { border-color: var(--rose); background: #fff; }
+  textarea { resize: vertical; min-height: 80px; line-height: 1.6; font-size: 12px; }
+  .hint { font-size: 11px; color: var(--gray); margin-top: 5px; }
+  .warning-box { background: #fff8e1; border: 1px solid #ffe082; border-radius: 8px; padding: 10px 14px; font-size: 11px; color: #856404; margin-bottom: 16px; line-height: 1.6; }
+
+  /* 選項格 */
+  .option-grid { display: grid; gap: 10px; margin-top: 8px; }
+  .option-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .option-grid.cols-5 { grid-template-columns: repeat(5, 1fr); }
+  .option-btn { border: 2px solid var(--border); border-radius: 8px; padding: 10px 8px; cursor: pointer; text-align: center; transition: all 0.15s; background: #fff; }
+  .option-btn:hover { border-color: var(--rose); }
+  .option-btn.active { border-color: var(--rose); background: var(--rose-light); }
+  .option-btn .icon { font-size: 20px; display: block; margin-bottom: 4px; }
+  .option-btn .label { font-size: 11px; font-weight: 700; display: block; }
+  .option-btn .sub { font-size: 10px; color: var(--gray); display: block; margin-top: 2px; }
+
+  /* 張數 */
+  .count-row { display: flex; align-items: center; gap: 12px; }
+  .count-row input[type="number"] { width: 80px; text-align: center; }
+
+  /* 每張設定 */
+  .slide-list { display: flex; flex-direction: column; gap: 14px; margin-top: 4px; }
+  .slide-card { background: var(--rose-light); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+  .slide-card .slide-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .slide-card .slide-num-label { font-size: 12px; font-weight: 700; color: var(--rose); letter-spacing: 1px; }
+  .slide-card .slide-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .slide-card .slide-row.full { grid-template-columns: 1fr; }
+  .slide-card label { font-size: 10px; color: var(--gray); display: block; margin-bottom: 3px; }
+  .ref-preview { width: 44px; height: 44px; border-radius: 6px; object-fit: cover; border: 1px solid var(--border); display: none; margin-top: 4px; }
+
+  /* 文字設定 */
+  .text-settings { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
+  /* 按鈕 */
+  .btn { border: none; border-radius: 8px; font-family: 'Noto Sans TC', sans-serif; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+  .btn-primary { background: var(--rose); color: #fff; width: 100%; font-size: 15px; padding: 15px; letter-spacing: 1px; }
+  .btn-primary:hover { background: #b5626a; }
+  .btn-primary:disabled { background: #ccc; cursor: not-allowed; }
+  .btn-zip { background: var(--dark); color: #fff; font-size: 13px; padding: 12px 24px; width: 100%; margin-top: 12px; letter-spacing: 1px; display: none; }
+  .btn-zip:hover { background: #444; }
+
+  /* 進度 */
+  .progress-area { display: none; margin-top: 20px; }
+  .progress-bar-wrap { background: var(--rose-light); border-radius: 999px; height: 6px; overflow: hidden; margin-bottom: 10px; }
+  .progress-bar { height: 100%; background: var(--rose); border-radius: 999px; width: 0%; transition: width 0.5s ease; }
+  .progress-log { font-size: 12px; color: var(--gray); min-height: 18px; }
+
+  /* 結果 */
+  .results-grid { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
+  .result-item { position: relative; border-radius: 8px; overflow: hidden; background: var(--rose-light); flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .result-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .result-item .dl-btn { position: absolute; bottom: 6px; right: 6px; background: rgba(0,0,0,0.7); color: #fff; border: none; border-radius: 4px; font-size: 10px; padding: 4px 8px; cursor: pointer; font-family: 'Noto Sans TC', sans-serif; }
+  .result-item .slide-num { position: absolute; top: 6px; left: 6px; background: rgba(0,0,0,0.5); color: #fff; border-radius: 4px; font-size: 10px; padding: 2px 6px; }
+  .result-item .regen-btn { position: absolute; top: 6px; right: 6px; background: rgba(255,255,255,0.9); color: var(--rose); border: 1px solid var(--rose); border-radius: 4px; font-size: 10px; padding: 3px 8px; cursor: pointer; font-family: 'Noto Sans TC', sans-serif; font-weight: 700; display: none; }
+  .result-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--gray); flex-direction: column; gap: 6px; padding: 8px; text-align: center; }
+  .spinner { width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--rose); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error-msg { background: #ffeaea; border: 1px solid #f5c0c0; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #c0392b; margin-top: 10px; display: none; }
+  .success-area { margin-top: 10px; display: none; }
+  .success-msg { background: #eafaea; border: 1px solid #b0d8b0; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #2e7d32; text-align: center; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">KOCSKIN</div>
+    <div class="logo-zh">克麗詩黛</div>
+  </div>
+  <div class="divider"></div>
+  <div class="title">社群圖片生成器 v6 <span class="badge">Gemini API</span></div>
+</header>
+
+<div class="container">
+
+  <!-- API Key -->
+  <div class="card">
+    <h2>Step 1 — API Key</h2>
+    <div class="warning-box">⚠️ Key 只在瀏覽器內使用，不會被儲存。請到 aistudio.google.com → Get API key 取得。</div>
+    <input type="password" id="apiKey" placeholder="AIzaSy..." />
+    <div class="hint">格式：AIzaSy... 開頭</div>
+  </div>
+
+  <!-- Notion 劇本庫 -->
+  <div class="card">
+    <h2>Step 1.5 — 從 Notion 劇本庫載入（選用）</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+      <div>
+        <label style="font-size:11px;color:var(--gray);display:block;margin-bottom:4px;">NOTION INTEGRATION TOKEN</label>
+        <input type="password" id="notionToken" placeholder="ntn_xxxxxxxx" />
+        <div class="hint">notion.so/my-integrations → 你的 Integration → Secret</div>
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--gray);display:block;margin-bottom:4px;">NOTION PROXY URL（Cloudflare Workers）</label>
+        <input type="text" id="notionProxy" placeholder="https://xxx.workers.dev" value="http://localhost:8766" />
+        <div class="hint">本機測試用 localhost:8766，上線後填 Cloudflare Workers URL</div>
+      </div>
+    </div>
+    <div style="margin-bottom:12px;">
+      <button class="btn" style="background:var(--dark);color:#fff;padding:10px 24px;font-size:13px;border-radius:8px;" onclick="loadNotionScripts()">
+        📋 載入劇本列表
+      </button>
+    </div>
+    <div id="notionScriptList" style="display:none;">
+      <label style="font-size:11px;color:var(--gray);display:block;margin-bottom:4px;">選擇劇本</label>
+      <select id="scriptSelect" style="margin-bottom:10px;" onchange="applyScript()">
+        <option value="">-- 選擇劇本 --</option>
+      </select>
+      <div id="scriptPreview" style="background:var(--rose-light);border-radius:8px;padding:12px;font-size:11px;color:var(--gray);display:none;">
+        載入中...
+      </div>
+      <button class="btn" style="background:var(--rose);color:#fff;padding:8px 20px;font-size:12px;border-radius:8px;margin-top:8px;display:none;" id="applyScriptBtn" onclick="applyScriptToForm()">
+        ✅ 套用此劇本到表單
+      </button>
+    </div>
+    <div id="notionMsg" style="font-size:12px;color:var(--gray);margin-top:6px;"></div>
+  </div>
+
+  <!-- 尺寸 + 風格 -->
+  <div class="card">
+    <h2>Step 2 — 尺寸 ＆ 風格</h2>
+    <div class="two-col">
+      <div>
+        <div style="font-size:12px;font-weight:700;margin-bottom:10px;">📐 圖片尺寸</div>
+        <div class="option-grid cols-3" id="sizeGrid">
+          <div class="option-btn active" onclick="selectSize(this,'1:1','1080x1080')" data-w="1080" data-h="1080">
+            <span class="icon">⬛</span><span class="label">1:1</span><span class="sub">IG 貼文／輪播</span>
+          </div>
+          <div class="option-btn" onclick="selectSize(this,'9:16','1080x1920')" data-w="1080" data-h="1920">
+            <span class="icon">📱</span><span class="label">9:16</span><span class="sub">IG／FB 限動</span>
+          </div>
+          <div class="option-btn" onclick="selectSize(this,'4:5','1080x1350')" data-w="1080" data-h="1350">
+            <span class="icon">🖼</span><span class="label">4:5</span><span class="sub">FB 貼文</span>
+          </div>
+          <div class="option-btn" onclick="selectSize(this,'1.91:1','1200x628')" data-w="1200" data-h="628">
+            <span class="icon">📺</span><span class="label">1.91:1</span><span class="sub">FB 廣告橫幅</span>
+          </div>
+          <div class="option-btn" onclick="selectSize(this,'16:9','1280x720')" data-w="1280" data-h="720">
+            <span class="icon">🎬</span><span class="label">16:9</span><span class="sub">YouTube 縮圖</span>
+          </div>
+          <div class="option-btn" onclick="selectSize(this,'2:1','1200x600')" data-w="1200" data-h="600">
+            <span class="icon">🗞</span><span class="label">2:1</span><span class="sub">Twitter／X</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:700;margin-bottom:10px;">🎨 生圖風格</div>
+        <div class="option-grid cols-3" id="styleGrid">
+          <div class="option-btn active" onclick="selectStyle(this,'2D flat anime illustration, Japanese Q-version cute style, soft pastel color palette, clean lineart, minimal shading, warm cozy colors')">
+            <span class="icon">🌸</span><span class="label">柔和日系</span><span class="sub">Q版粉彩平塗</span>
+          </div>
+          <div class="option-btn" onclick="selectStyle(this,'detailed anime illustration style, cinematic lighting, rich color palette, semi-realistic rendering, beautiful character design')">
+            <span class="icon">✨</span><span class="label">精緻動漫</span><span class="sub">細緻光影CG</span>
+          </div>
+          <div class="option-btn" onclick="selectStyle(this,'minimalist flat illustration, clean geometric shapes, Scandinavian design aesthetic, limited color palette, simple elegant linework')">
+            <span class="icon">◻️</span><span class="label">簡約插畫</span><span class="sub">極簡北歐風</span>
+          </div>
+          <div class="option-btn" onclick="selectStyle(this,'soft watercolor illustration style, hand-painted texture, gentle color bleeding, warm artistic brush strokes, dreamy atmosphere')">
+            <span class="icon">🎨</span><span class="label">水彩手繪</span><span class="sub">溫暖筆觸感</span>
+          </div>
+          <div class="option-btn" onclick="selectStyle(this,'vintage magazine editorial style, film grain texture, muted retro color palette, elegant typography layout feel, nostalgic warm tones')">
+            <span class="icon">📷</span><span class="label">復古雜誌</span><span class="sub">膠片文青感</span>
+          </div>
+          <div class="option-btn" onclick="selectStyle(this,'modern 3D cartoon render style, smooth plastic-like surfaces, vibrant saturated colors, cute chibi proportions, studio lighting')">
+            <span class="icon">🧸</span><span class="label">3D卡通</span><span class="sub">立體可愛感</span>
+          </div>
+          <div class="option-btn" onclick="selectStyle(this,'Korean soft illustration style, warm beige and cream tones, delicate thin linework, cozy healing atmosphere, minimal clean background, gentle pastel colors, sophisticated feminine aesthetic')">
+            <span class="icon">🇰🇷</span><span class="label">韓系小清新</span><span class="sub">療癒米白風</span>
+          </div>
+          <div class="option-btn" onclick="selectStyle(this,'Korean commercial product photography style, clean white or light grey background, soft diffused studio lighting, elegant prop styling, high-end skincare brand aesthetic, delicate and refined')">
+            <span class="icon">🪞</span><span class="label">韓系商品攝影</span><span class="sub">質感電商風</span>
+          </div>
+          <div class="option-btn" onclick="selectStyle(this,'dreamy pastel fantasy illustration, candy-color palette, soft glowing light effects, romantic feminine aesthetic, sparkles and bokeh, gentle gradient tones, magical girly atmosphere')">
+            <span class="icon">🌷</span><span class="label">粉彩夢幻</span><span class="sub">少女浪漫感</span>
+          </div>
+          <div class="option-btn" onclick="selectStyle(this,'luxury dark aesthetic photography, deep rich background colors like midnight black or deep burgundy, dramatic moody lighting, metallic gold accents, high-end premium brand feel, editorial luxury style')">
+            <span class="icon">🖤</span><span class="label">深色奢華</span><span class="sub">高端品牌感</span>
+          </div>
+          <div class="option-btn" onclick="selectStyle(this,'Pixar-inspired 3D animation style, warm expressive characters, rich detailed environments, cinematic lighting, emotional storytelling atmosphere, smooth organic surfaces, vibrant yet natural color palette')">
+            <span class="icon">🎬</span><span class="label">3D寫實動畫</span><span class="sub">Pixar質感</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 品牌 + 文字設定 -->
+  <div class="card">
+    <h2>Step 3 — 品牌 ＆ 文字設定</h2>
+    <div class="text-settings">
+      <div>
+        <label style="font-size:11px;color:var(--gray);display:block;margin-bottom:4px;">品牌名稱（顯示在圖片上方）</label>
+        <input type="text" id="brandName" value="KOCSKIN 克麗詩黛" />
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--gray);display:block;margin-bottom:4px;">文字字型</label>
+        <select id="fontStyle">
+          <option value="900 46px 'Noto Sans TC'">黑體 Bold（現在）</option>
+          <option value="400 44px 'Noto Serif TC'">明體 Regular</option>
+          <option value="700 44px 'Noto Serif TC'">明體 Bold</option>
+          <option value="300 44px 'Noto Sans TC'">黑體 Light</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--gray);display:block;margin-bottom:4px;">文字顏色</label>
+        <select id="textColor">
+          <option value="white">白色（預設）</option>
+          <option value="black">黑色</option>
+          <option value="rose">玫瑰紅</option>
+          <option value="cream">奶油色</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- 張數 + 每張設定 -->
+  <div class="card">
+    <h2>Step 4 — 張數 ＆ 每張內容</h2>
+    <div class="count-row" style="margin-bottom:20px;">
+      <span style="font-size:13px;font-weight:700;">生成張數：</span>
+      <input type="number" id="slideCount" value="5" min="1" max="10" style="width:70px;" onchange="renderSlides()" />
+      <span style="font-size:12px;color:var(--gray);">張（最多 10 張）</span>
+    </div>
+    <div class="slide-list" id="slideList"></div>
+  </div>
+
+  <!-- 生成 -->
+  <button class="btn btn-primary" id="generateBtn" onclick="startGeneration()">
+    🎨 開始自動生成
+  </button>
+
+  <div class="error-msg" id="errorMsg"></div>
+
+  <div class="success-area" id="successArea">
+    <div class="success-msg">✅ 全部完成！</div>
+    <button class="btn btn-zip" id="zipBtn" onclick="downloadAllAsZip()">📦 一鍵打包下載全部 ZIP</button>
+  </div>
+
+  <div class="progress-area" id="progressArea">
+    <div style="margin-top:20px;">
+      <div class="progress-bar-wrap"><div class="progress-bar" id="progressBar"></div></div>
+      <div class="progress-log" id="progressLog">準備中...</div>
+    </div>
+    <div class="results-grid" id="resultsGrid"></div>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+let currentStyle = "2D flat anime illustration, Japanese Q-version cute style, soft pastel color palette, clean lineart, minimal shading, warm cozy colors";
+let currentW = 1080, currentH = 1080;
+let generatedImages = [];
+let notionScripts = [];
+
+// ===== Notion 串接 =====
+const NOTION_DB_ID = 'd069e183-0a47-4aa7-a71c-fdfbe12a36c1';
+
+async function loadNotionScripts() {
+  const token = document.getElementById('notionToken').value.trim();
+  if (!token || token.length < 10) {
+    document.getElementById('notionMsg').textContent = '⚠️ 請輸入 Notion Token';
+    return;
+  }
+  document.getElementById('notionMsg').textContent = '載入中...';
+  try {
+    const proxy = document.getElementById('notionProxy').value.trim() || 'http://localhost:8766';
+    const res = await fetch(`${proxy}/v1/databases/${NOTION_DB_ID}/query`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ page_size: 50, sorts: [{ property: '建立日期', direction: 'descending' }] })
+    });
+    if (!res.ok) throw new Error(`Notion API 錯誤 ${res.status}`);
+    const data = await res.json();
+    notionScripts = data.results;
+
+    const select = document.getElementById('scriptSelect');
+    select.innerHTML = '<option value="">-- 選擇劇本 --</option>';
+    notionScripts.forEach((page, i) => {
+      const name = page.properties['劇本名稱']?.title?.[0]?.plain_text || `劇本 ${i+1}`;
+      const status = page.properties['狀態']?.select?.name || '';
+      select.innerHTML += `<option value="${i}">${name}${status ? ` [${status}]` : ''}</option>`;
+    });
+
+    document.getElementById('notionScriptList').style.display = 'block';
+    document.getElementById('notionMsg').textContent = `✅ 載入 ${notionScripts.length} 個劇本`;
+  } catch(e) {
+    document.getElementById('notionMsg').textContent = `❌ 失敗：${e.message}`;
+  }
+}
+
+function applyScript() {
+  const idx = document.getElementById('scriptSelect').value;
+  if (idx === '') {
+    document.getElementById('scriptPreview').style.display = 'none';
+    document.getElementById('applyScriptBtn').style.display = 'none';
+    return;
+  }
+  const page = notionScripts[parseInt(idx)];
+  const props = page.properties;
+  const get = (key) => props[key]?.rich_text?.[0]?.plain_text || props[key]?.title?.[0]?.plain_text || '';
+
+  const name = get('劇本名稱') || '未命名';
+  const theme = get('故事主題');
+  const style = props['風格']?.select?.name || '';
+  const size = props['尺寸']?.select?.name || '';
+
+  let preview = `<strong>${name}</strong><br>`;
+  if (theme) preview += `主題：${theme}<br>`;
+  if (style) preview += `風格：${style}　`;
+  if (size) preview += `尺寸：${size}<br>`;
+  preview += '<hr style="margin:6px 0;border-color:var(--border);">';
+  for (let i = 1; i <= 5; i++) {
+    const m = get(`第${i}張主文案`);
+    const s = get(`第${i}張副文案`);
+    if (m || s) preview += `第${i}張：${m}${s ? ' / '+s : ''}<br>`;
+  }
+
+  document.getElementById('scriptPreview').innerHTML = preview;
+  document.getElementById('scriptPreview').style.display = 'block';
+  document.getElementById('applyScriptBtn').style.display = 'inline-block';
+}
+
+function applyScriptToForm() {
+  const idx = document.getElementById('scriptSelect').value;
+  if (idx === '') return;
+  const page = notionScripts[parseInt(idx)];
+  const props = page.properties;
+  const get = (key) => props[key]?.rich_text?.[0]?.plain_text || props[key]?.title?.[0]?.plain_text || '';
+
+  // 設定風格
+  const styleMap = {
+    '柔和日系': '2D flat anime illustration, Japanese Q-version cute style, soft pastel color palette, clean lineart, minimal shading, warm cozy colors',
+    '精緻動漫': 'detailed anime illustration style, cinematic lighting, rich color palette, semi-realistic rendering, beautiful character design',
+    '簡約插畫': 'minimalist flat illustration, clean geometric shapes, Scandinavian design aesthetic, limited color palette, simple elegant linework',
+    '水彩手繪': 'soft watercolor illustration style, hand-painted texture, gentle color bleeding, warm artistic brush strokes, dreamy atmosphere',
+    '復古雜誌': 'vintage magazine editorial style, film grain texture, muted retro color palette, elegant typography layout feel, nostalgic warm tones',
+    '韓系小清新': 'Korean soft illustration style, warm beige and cream tones, delicate thin linework, cozy healing atmosphere, minimal clean background',
+    '韓系商品攝影': 'Korean commercial product photography style, clean white or light grey background, soft diffused studio lighting, elegant prop styling',
+    '粉彩夢幻': 'dreamy pastel fantasy illustration, candy-color palette, soft glowing light effects, romantic feminine aesthetic, sparkles and bokeh',
+    '深色奢華': 'luxury dark aesthetic photography, deep rich background colors, dramatic moody lighting, metallic gold accents, high-end premium brand feel',
+    '3D卡通': 'modern 3D cartoon render style, smooth plastic-like surfaces, vibrant saturated colors, cute chibi proportions, studio lighting',
+    '3D寫實動畫': 'Pixar-inspired 3D animation style, warm expressive characters, rich detailed environments, cinematic lighting, emotional storytelling',
+    '寫實攝影': 'photorealistic commercial photography style, professional studio lighting, high resolution, advertising quality'
+  };
+  const styleVal = props['風格']?.select?.name || '';
+  if (styleVal && styleMap[styleVal]) {
+    currentStyle = styleMap[styleVal];
+    document.querySelectorAll('#styleGrid .option-btn').forEach(b => b.classList.remove('active'));
+  }
+
+  // 設定尺寸
+  const sizeMap = {
+    '1:1 IG輪播': {w:1080, h:1080, el:0},
+    '9:16 限動': {w:1080, h:1920, el:1},
+    '4:5 FB貼文': {w:1080, h:1350, el:2},
+    '1.91:1 FB廣告': {w:1200, h:628, el:3},
+    '16:9 YouTube': {w:1280, h:720, el:4}
+  };
+  const sizeVal = props['尺寸']?.select?.name || '';
+  if (sizeVal && sizeMap[sizeVal]) {
+    currentW = sizeMap[sizeVal].w;
+    currentH = sizeMap[sizeVal].h;
+  }
+
+  // 設定品牌名稱
+  const brand = get('品牌名稱');
+  if (brand) document.getElementById('brandName').value = brand;
+
+  // 設定張數（根據有幾張有 prompt）
+  let count = 0;
+  for (let i = 1; i <= 5; i++) {
+    if (get(`第${i}張主文案`) || get(`第${i}張Prompt`)) count = i;
+  }
+  if (count > 0) {
+    document.getElementById('slideCount').value = count;
+    renderSlides();
+  }
+
+  // 填入文案和 Prompt
+  setTimeout(() => {
+    const mains = document.querySelectorAll('.main-copy');
+    const subs = document.querySelectorAll('.sub-copy');
+    const prompts = document.querySelectorAll('.scene-prompt');
+    for (let i = 1; i <= 5; i++) {
+      if (mains[i-1]) mains[i-1].value = get(`第${i}張主文案`);
+      if (subs[i-1]) subs[i-1].value = get(`第${i}張副文案`);
+      if (prompts[i-1]) prompts[i-1].value = get(`第${i}張Prompt`);
+    }
+    document.getElementById('notionMsg').textContent = '✅ 劇本已套用到表單！';
+  }, 100);
+}
+// ===== Notion 串接結束 =====
+
+const defaultPrompts = [
+  "Scene: A young East Asian woman with dark brown low ponytail hair, casual home outfit, sitting on sofa looking at smartphone with disappointed sad expression. Warm cozy living room, indoor plants, soft lamp.",
+  "Scene: East Asian woman with light ash brown short bob, white lab coat with KOCSKIN name badge, holding clipboard in warehouse with pink product boxes on shelves. Determined professional expression.",
+  "Scene: Young East Asian woman dark brown low ponytail, casual outfit, at cafe table tapping smartphone with hopeful focused expression. Coffee cup beside her.",
+  "Scene: Same young East Asian woman dark brown low ponytail, jumping up from sofa in pure excitement holding phone showing notification. Cushions displaced. Bright living room.",
+  "Scene: Same young East Asian woman dark brown low ponytail, sitting at home table holding product with deep satisfied smile. Open delivery box with rose-pink packaging beside her."
+];
+
+const defaultMains = ["欸？怎麼又賣完了","我們知道你在等","先登記，不怕搶輸","就是現在！","終於等到了"];
+const defaultSubs = ["每次都慢一步，真的很心酸。","新一批膠原飲，月中到貨。","到貨第一時間通知你。","你等的膠原飲，回來了。","值得等待的，都值得擁有。"];
+
+function selectSize(el, ratio, label) {
+  document.querySelectorAll('#sizeGrid .option-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  currentW = parseInt(el.dataset.w);
+  currentH = parseInt(el.dataset.h);
+}
+
+function selectStyle(el, style) {
+  document.querySelectorAll('#styleGrid .option-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  currentStyle = style;
+}
+
+function renderSlides() {
+  const count = Math.min(10, Math.max(1, parseInt(document.getElementById('slideCount').value) || 5));
+  generatedImages = new Array(count).fill(null);
+  const list = document.getElementById('slideList');
+  list.innerHTML = '';
+  for (let i = 0; i < count; i++) {
+    list.innerHTML += `
+      <div class="slide-card">
+        <div class="slide-header">
+          <span class="slide-num-label">第 ${i+1} 張</span>
+        </div>
+        <div class="slide-row">
+          <div>
+            <label>主文案</label>
+            <input type="text" class="main-copy" value="${defaultMains[i] || ''}" />
+          </div>
+          <div>
+            <label>副文案</label>
+            <input type="text" class="sub-copy" value="${defaultSubs[i] || ''}" />
+          </div>
+        </div>
+        <div class="slide-row full">
+          <div>
+            <label>場景描述 Prompt</label>
+            <textarea class="scene-prompt" id="prompt-${i}">${defaultPrompts[i] || ''}</textarea>
+          </div>
+        </div>
+        <div>
+          <label>產品參考圖（最多 3 張，選填）</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">
+            <div style="flex:1;min-width:120px;">
+              <div style="font-size:10px;color:var(--gray);margin-bottom:3px;">角度 1</div>
+              <input type="file" accept="image/*" id="refImg-${i}-0" onchange="previewRef(${i},0)" style="font-size:10px;padding:4px 8px;" />
+              <img class="ref-preview" id="refPreview-${i}-0" style="margin-top:4px;" />
+            </div>
+            <div style="flex:1;min-width:120px;">
+              <div style="font-size:10px;color:var(--gray);margin-bottom:3px;">角度 2</div>
+              <input type="file" accept="image/*" id="refImg-${i}-1" onchange="previewRef(${i},1)" style="font-size:10px;padding:4px 8px;" />
+              <img class="ref-preview" id="refPreview-${i}-1" style="margin-top:4px;" />
+            </div>
+            <div style="flex:1;min-width:120px;">
+              <div style="font-size:10px;color:var(--gray);margin-bottom:3px;">角度 3</div>
+              <input type="file" accept="image/*" id="refImg-${i}-2" onchange="previewRef(${i},2)" style="font-size:10px;padding:4px 8px;" />
+              <img class="ref-preview" id="refPreview-${i}-2" style="margin-top:4px;" />
+            </div>
+          </div>
+          <div class="hint" style="margin-top:6px;">上傳多角度產品圖，Gemini 同時參考，比例與外觀更準確</div>
+        </div>
+      </div>`;
+  }
+  renderResultSlots(count);
+}
+
+function renderResultSlots(count) {
+  const grid = document.getElementById('resultsGrid');
+  const size = Math.min(160, Math.floor((960 - (count-1)*12) / count));
+  const h = Math.round(size * currentH / currentW);
+  grid.innerHTML = '';
+  for (let i = 0; i < count; i++) {
+    grid.innerHTML += `
+      <div class="result-item" id="result-${i}" style="width:${size}px;height:${h}px;">
+        <div class="result-placeholder"><div>第 ${i+1} 張</div></div>
+      </div>`;
+  }
+}
+
+function previewRef(i, slot) {
+  const file = document.getElementById(`refImg-${i}-${slot}`)?.files[0];
+  const preview = document.getElementById(`refPreview-${i}-${slot}`);
+  if (file && preview) { preview.src = URL.createObjectURL(file); preview.style.display = 'block'; }
+  else if (preview) { preview.style.display = 'none'; }
+}
+
+async function getRefBase64s(i) {
+  const results = [];
+  for (let slot = 0; slot < 3; slot++) {
+    const el = document.getElementById(`refImg-${i}-${slot}`);
+    if (!el || !el.files[0]) continue;
+    const b64 = await new Promise(resolve => {
+      const r = new FileReader();
+      r.onload = e => resolve(e.target.result.split(',')[1]);
+      r.readAsDataURL(el.files[0]);
+    });
+    results.push(b64);
+  }
+  return results;
+}
+
+function log(msg) { document.getElementById('progressLog').textContent = msg; }
+function setProgress(p) { document.getElementById('progressBar').style.width = p + '%'; }
+function showError(msg) { const e = document.getElementById('errorMsg'); e.textContent = msg; e.style.display = 'block'; }
+
+async function callGemini(prompt, apiKey, refBase64s) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`;
+  let parts = [];
+  if (refBase64s && refBase64s.length > 0) {
+    refBase64s.forEach(b64 => parts.push({ inlineData: { mimeType: 'image/jpeg', data: b64 } }));
+    parts.push({ text: `Use the ${refBase64s.length} uploaded product reference image(s) above to accurately match the product bottle shape, color, cap design, and label. ` + prompt });
+  } else {
+    parts.push({ text: prompt });
+  }
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contents: [{ parts }], generationConfig: { responseModalities: ['TEXT','IMAGE'] } })
+  });
+  if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || `API 錯誤 ${res.status}`); }
+  const data = await res.json();
+  const imgPart = (data.candidates?.[0]?.content?.parts || []).find(p => p.inlineData);
+  if (!imgPart) throw new Error('未收到圖片');
+  return imgPart.inlineData.data;
+}
+
+function getTextColor(setting) {
+  const colors = { white: '#ffffff', black: '#222222', rose: '#c9747a', cream: '#fdf6f0' };
+  return colors[setting] || '#ffffff';
+}
+
+async function addText(b64, main, sub) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = currentW; c.height = currentH;
+      const ctx = c.getContext('2d');
+      ctx.drawImage(img, 0, 0, currentW, currentH);
+
+      const hasMain = main && main.trim() !== '';
+      const hasSub = sub && sub.trim() !== '';
+      const hasCopy = hasMain || hasSub;
+
+      // 頂部遮罩（品牌名用）
+      const topH = Math.round(currentH * 0.1);
+      const tg = ctx.createLinearGradient(0,0,0,topH);
+      tg.addColorStop(0,'rgba(0,0,0,0.5)'); tg.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle = tg; ctx.fillRect(0,0,currentW,topH);
+
+      // 底部遮罩（只在有文案時加）
+      if (hasCopy) {
+        const botStart = Math.round(currentH * 0.62);
+        const bg = ctx.createLinearGradient(0,botStart,0,currentH);
+        bg.addColorStop(0,'rgba(0,0,0,0)'); bg.addColorStop(1,'rgba(0,0,0,0.78)');
+        ctx.fillStyle = bg; ctx.fillRect(0,botStart,currentW,currentH-botStart);
+      }
+
+      const brand = document.getElementById('brandName').value || '';
+      const fontStyle = document.getElementById('fontStyle').value;
+      const textColor = getTextColor(document.getElementById('textColor').value);
+      const cx = currentW / 2;
+      const brandY = Math.round(currentH * 0.038);
+      const mainY = Math.round(currentH * 0.865);
+      const subY = Math.round(currentH * 0.915);
+
+      // 品牌名（有填才顯示）
+      if (brand.trim()) {
+        const brandSize = Math.round(currentW * 0.022);
+        ctx.font = `400 ${brandSize}px 'Noto Sans TC',sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillText(brand, cx+1, brandY+1);
+        ctx.fillStyle = textColor; ctx.fillText(brand, cx, brandY);
+      }
+
+      // 主文案（有填才顯示）
+      if (hasMain) {
+        ctx.font = fontStyle.replace('46px', `${Math.round(currentW*0.044)}px`);
+        ctx.textAlign = 'center';
+        ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillText(main, cx+2, mainY+2);
+        ctx.fillStyle = textColor; ctx.fillText(main, cx, mainY);
+      }
+
+      // 副文案（有填才顯示）
+      if (hasSub) {
+        const subSize = Math.round(currentW * 0.028);
+        ctx.font = `400 ${subSize}px 'Noto Sans TC',sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillText(sub, cx+1, subY+1);
+        ctx.fillStyle = textColor === '#ffffff' ? 'rgba(255,255,255,0.88)' : textColor;
+        ctx.fillText(sub, cx, subY);
+      }
+
+      resolve(c.toDataURL('image/png'));
+    };
+    img.src = 'data:image/png;base64,' + b64;
+  });
+}
+
+function setLoading(i) {
+  document.getElementById(`result-${i}`).innerHTML = `<div class="result-placeholder"><div class="spinner"></div><div style="font-size:10px;margin-top:4px;">生成中...</div></div>`;
+}
+
+function setResult(i, url) {
+  generatedImages[i] = url;
+  document.getElementById(`result-${i}`).innerHTML = `
+    <span class="slide-num">0${i+1}</span>
+    <img src="${url}" />
+    <button class="regen-btn" onclick="regenOne(${i})" style="display:block">🔄 重生</button>
+    <button class="dl-btn" onclick="dl('${url}','slide_0${i+1}.png')">下載</button>`;
+}
+
+function setFailed(i, msg) {
+  generatedImages[i] = null;
+  document.getElementById(`result-${i}`).innerHTML = `
+    <div class="result-placeholder" style="color:#c0392b;">
+      ❌<br><span style="font-size:9px">${msg.substring(0,60)}</span><br>
+      <button class="btn" style="background:var(--rose);color:#fff;font-size:10px;padding:3px 8px;margin-top:4px;border-radius:4px;" onclick="regenOne(${i})">重試</button>
+    </div>`;
+}
+
+async function regenOne(i) {
+  const key = document.getElementById('apiKey').value.trim();
+  if (!key || key.length < 10) { alert('請先輸入 API Key'); return; }
+  const main = document.querySelectorAll('.main-copy')[i]?.value.trim() || '';
+  const sub = document.querySelectorAll('.sub-copy')[i]?.value.trim() || '';
+  const scenePrompt = document.getElementById(`prompt-${i}`)?.value.trim() || '';
+  const fullPrompt = `${currentStyle}, square format, no text overlay. ${scenePrompt}`;
+  const refBase64s = await getRefBase64s(i);
+  setLoading(i);
+  log(`重新生成第 ${i+1} 張...`);
+  try {
+    const b64 = await callGemini(fullPrompt, key, refBase64s);
+    const url = await addText(b64, main, sub);
+    setResult(i, url);
+    log(`第 ${i+1} 張完成。`);
+    checkAllDone();
+  } catch(e) {
+    setFailed(i, e.message);
+    showError(`第 ${i+1} 張失敗：${e.message}`);
+  }
+}
+
+function checkAllDone() {
+  const allDone = generatedImages.every(img => img !== null);
+  if (allDone) {
+    document.getElementById('successArea').style.display = 'block';
+    document.getElementById('zipBtn').style.display = 'block';
+  }
+}
+
+function dl(url, name) { const a = document.createElement('a'); a.href = url; a.download = name; a.click(); }
+
+async function downloadAllAsZip() {
+  const zip = new JSZip();
+  const folder = zip.folder('KOCSKIN_社群圖片');
+  for (let i = 0; i < generatedImages.length; i++) {
+    if (generatedImages[i]) {
+      folder.file(`slide_0${i+1}.png`, generatedImages[i].split(',')[1], { base64: true });
+    }
+  }
+  const blob = await zip.generateAsync({ type: 'blob' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'KOCSKIN_社群圖片.zip'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function startGeneration() {
+  const key = document.getElementById('apiKey').value.trim();
+  if (!key || key.length < 10) { showError('請輸入有效的 API Key'); return; }
+  const count = parseInt(document.getElementById('slideCount').value);
+  const mains = [...document.querySelectorAll('.main-copy')].map(e => e.value.trim());
+  const subs = [...document.querySelectorAll('.sub-copy')].map(e => e.value.trim());
+
+  document.getElementById('generateBtn').disabled = true;
+  document.getElementById('errorMsg').style.display = 'none';
+  document.getElementById('successArea').style.display = 'none';
+  document.getElementById('progressArea').style.display = 'block';
+  generatedImages = new Array(count).fill(null);
+  renderResultSlots(count);
+
+  let ok = 0;
+  for (let i = 0; i < count; i++) {
+    setLoading(i);
+    log(`生成第 ${i+1} 張（共 ${count} 張）...`);
+    setProgress((i/count)*80);
+    try {
+      const scenePrompt = document.getElementById(`prompt-${i}`)?.value.trim() || '';
+      const fullPrompt = `${currentStyle}, no text overlay, no watermark. ${scenePrompt}`;
+      const refBase64s = await getRefBase64s(i);
+      const b64 = await callGemini(fullPrompt, key, refBase64s);
+      log(`第 ${i+1} 張完成，壓字中...`);
+      const url = await addText(b64, mains[i], subs[i]);
+      setResult(i, url);
+      ok++;
+      setProgress(((i+1)/count)*95);
+    } catch(e) {
+      setFailed(i, e.message);
+      showError(`第 ${i+1} 張失敗：${e.message}`);
+    }
+  }
+
+  setProgress(100);
+  log(`完成！成功 ${ok}/${count} 張。`);
+  document.getElementById('generateBtn').disabled = false;
+  checkAllDone();
+}
+
+// 初始化
+renderSlides();
+</script>
+</body>
+</html>
