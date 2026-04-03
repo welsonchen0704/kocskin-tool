@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KOCSKIN 社群圖片生成器 v6</title>
+<title>KOCSKIN 社群圖片生成器 v8</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;700;900&family=Noto+Serif+TC:wght@400;700&display=swap');
   :root { --rose: #c9747a; --rose-light: #f5e8e8; --cream: #fdf6f0; --dark: #2a1f1f; --gray: #888; --border: #e8d5d5; }
@@ -93,17 +93,46 @@
     <div class="logo-zh">克麗詩黛</div>
   </div>
   <div class="divider"></div>
-  <div class="title">社群圖片生成器 v6 <span class="badge">Gemini API</span></div>
+  <div class="title">社群圖片生成器 v8 <span class="badge">Gemini API</span> <span class="badge" style="background:#34a853;">中文Prompt</span></div>
 </header>
 
 <div class="container">
 
-  <!-- API Key -->
+  <!-- API Key + 引擎選擇 -->
   <div class="card">
-    <h2>Step 1 — API Key</h2>
-    <div class="warning-box">⚠️ Key 只在瀏覽器內使用，不會被儲存。請到 aistudio.google.com → Get API key 取得。</div>
-    <input type="password" id="apiKey" placeholder="AIzaSy..." />
-    <div class="hint">格式：AIzaSy... 開頭</div>
+    <h2>Step 1 — API Key ＆ 生圖引擎</h2>
+    <div class="warning-box">⚠️ Key 只在瀏覽器內使用，不會被儲存。</div>
+
+    <!-- 引擎選擇 -->
+    <div style="margin-bottom:16px;">
+      <div style="font-size:12px;font-weight:700;margin-bottom:10px;">選擇生圖引擎</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="option-btn active" id="engineGemini" onclick="selectEngine('gemini')" style="text-align:center;padding:14px;">
+          <span class="icon">🟢</span>
+          <span class="label" style="display:block;margin-top:4px;">Gemini</span>
+          <span class="sub" style="display:block;">柔和日系、插畫風格較強</span>
+        </div>
+        <div class="option-btn" id="engineDalle" onclick="selectEngine('dalle')" style="text-align:center;padding:14px;">
+          <span class="icon">🔵</span>
+          <span class="label" style="display:block;margin-top:4px;">DALL-E 3</span>
+          <span class="sub" style="display:block;">文字控制較準、成分說明圖</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gemini Key -->
+    <div id="geminiKeySection">
+      <label style="font-size:11px;color:var(--gray);display:block;margin-bottom:4px;">GOOGLE AI STUDIO API KEY</label>
+      <input type="password" id="apiKey" placeholder="AIzaSy..." />
+      <div class="hint">aistudio.google.com → Get API key</div>
+    </div>
+
+    <!-- DALL-E Key -->
+    <div id="dalleKeySection" style="display:none;">
+      <label style="font-size:11px;color:var(--gray);display:block;margin-bottom:4px;">OPENAI API KEY</label>
+      <input type="password" id="openaiKey" placeholder="sk-proj-..." />
+      <div class="hint">platform.openai.com → API keys</div>
+    </div>
   </div>
 
   <!-- Notion 劇本庫 -->
@@ -277,6 +306,22 @@ let currentStyle = "2D flat anime illustration, Japanese Q-version cute style, s
 let currentW = 1080, currentH = 1080;
 let generatedImages = [];
 let notionScripts = [];
+let currentEngine = 'gemini'; // 'gemini' or 'dalle'
+
+// ===== 引擎切換 =====
+function selectEngine(engine) {
+  currentEngine = engine;
+  document.querySelectorAll('#engineGemini, #engineDalle').forEach(el => el.classList.remove('active'));
+  if (engine === 'gemini') {
+    document.getElementById('engineGemini').classList.add('active');
+    document.getElementById('geminiKeySection').style.display = 'block';
+    document.getElementById('dalleKeySection').style.display = 'none';
+  } else {
+    document.getElementById('engineDalle').classList.add('active');
+    document.getElementById('geminiKeySection').style.display = 'none';
+    document.getElementById('dalleKeySection').style.display = 'block';
+  }
+}
 
 // ===== Notion 串接 =====
 const NOTION_DB_ID = '3e3b72065f544e8a9469e2caa939e60b';
@@ -415,6 +460,11 @@ function applyScriptToForm() {
       if (mains[i-1]) mains[i-1].value = get(`第${i}張主文案`);
       if (subs[i-1]) subs[i-1].value = get(`第${i}張副文案`);
       if (prompts[i-1]) prompts[i-1].value = get(`第${i}張Prompt`);
+      // 中文欄清空（英文 Prompt 已填入右欄，左欄供同事自行填中文備註）
+      const zhEl = document.getElementById(`prompt-zh-${i-1}`);
+      if (zhEl) zhEl.value = '';
+      const status = document.getElementById(`transStatus-${i-1}`);
+      if (status) status.textContent = '（已載入英文）';
     }
     document.getElementById('notionMsg').textContent = '✅ 劇本已套用到表單！';
   }, 100);
@@ -468,8 +518,22 @@ function renderSlides() {
         </div>
         <div class="slide-row full">
           <div>
-            <label>場景描述 Prompt</label>
-            <textarea class="scene-prompt" id="prompt-${i}">${defaultPrompts[i] || ''}</textarea>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div>
+                <label style="display:flex;align-items:center;justify-content:space-between;">
+                  <span>中文場景描述（人看）</span>
+                  <button onclick="translateOne(${i})" id="transBtn-${i}" style="font-size:10px;padding:2px 8px;border:1px solid var(--rose);border-radius:4px;background:#fff;color:var(--rose);cursor:pointer;font-family:'Noto Sans TC',sans-serif;">翻譯 →</button>
+                </label>
+                <textarea class="scene-prompt-zh" id="prompt-zh-${i}" placeholder="用中文描述場景，例如：媽媽拿著沐浴露站在浴室，滿意微笑..." style="min-height:90px;"></textarea>
+              </div>
+              <div>
+                <label style="display:flex;align-items:center;gap:6px;">
+                  <span>英文 Prompt（送 Gemini）</span>
+                  <span id="transStatus-${i}" style="font-size:10px;color:var(--gray);"></span>
+                </label>
+                <textarea class="scene-prompt" id="prompt-${i}" placeholder="英文 Prompt（可直接填，或由左欄翻譯產生）" style="min-height:90px;">${defaultPrompts[i] || ''}</textarea>
+              </div>
+            </div>
           </div>
         </div>
         <div>
@@ -533,7 +597,69 @@ async function getRefBase64s(i) {
   return results;
 }
 
-function log(msg) { document.getElementById('progressLog').textContent = msg; }
+// ===== 中文 → 英文翻譯（用 Claude API）=====
+async function translatePrompt(zhText) {
+  if (!zhText || !zhText.trim()) return '';
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      messages: [{
+        role: 'user',
+        content: `Translate the following Chinese image generation scene description into English prompt for Gemini image generation. Output ONLY the translated English prompt, no explanation, no quotes, no preamble.\n\nChinese:\n${zhText}`
+      }]
+    })
+  });
+  if (!res.ok) throw new Error('翻譯 API 失敗');
+  const data = await res.json();
+  return (data.content || []).find(b => b.type === 'text')?.text?.trim() || '';
+}
+
+async function translateOne(i) {
+  const zhEl = document.getElementById(`prompt-zh-${i}`);
+  const enEl = document.getElementById(`prompt-${i}`);
+  const btn = document.getElementById(`transBtn-${i}`);
+  const status = document.getElementById(`transStatus-${i}`);
+  const zh = zhEl?.value.trim();
+  if (!zh) { status.textContent = '⚠️ 請先填中文描述'; return; }
+  btn.disabled = true; btn.textContent = '翻譯中...';
+  status.textContent = '⏳';
+  try {
+    const en = await translatePrompt(zh);
+    enEl.value = en;
+    status.textContent = '✅ 翻譯完成';
+  } catch(e) {
+    status.textContent = '❌ 翻譯失敗';
+  } finally {
+    btn.disabled = false; btn.textContent = '翻譯 →';
+  }
+}
+
+async function translateAllEmpty() {
+  const count = parseInt(document.getElementById('slideCount').value);
+  for (let i = 0; i < count; i++) {
+    const zhEl = document.getElementById(`prompt-zh-${i}`);
+    const enEl = document.getElementById(`prompt-${i}`);
+    const zh = zhEl?.value.trim();
+    const en = enEl?.value.trim();
+    if (zh && !en) {
+      const status = document.getElementById(`transStatus-${i}`);
+      if (status) status.textContent = '⏳ 翻譯中...';
+      try {
+        const translated = await translatePrompt(zh);
+        enEl.value = translated;
+        if (status) status.textContent = '✅';
+      } catch(e) {
+        if (status) status.textContent = '❌';
+      }
+    }
+  }
+}
+// ===== 翻譯結束 =====
+
+
 function setProgress(p) { document.getElementById('progressBar').style.width = p + '%'; }
 function showError(msg) { const e = document.getElementById('errorMsg'); e.textContent = msg; e.style.display = 'block'; }
 
@@ -556,6 +682,37 @@ async function callGemini(prompt, apiKey, refBase64s) {
   const imgPart = (data.candidates?.[0]?.content?.parts || []).find(p => p.inlineData);
   if (!imgPart) throw new Error('未收到圖片');
   return imgPart.inlineData.data;
+}
+
+async function callDalle(prompt, apiKey) {
+  const sizeMap = {
+    '1080x1080': '1024x1024',
+    '1080x1920': '1024x1792',
+    '1080x1350': '1024x1792',
+    '1200x628': '1792x1024',
+    '1280x720': '1792x1024'
+  };
+  const dalleSize = sizeMap[`${currentW}x${currentH}`] || '1024x1024';
+  const res = await fetch('https://api.openai.com/v1/images/generations', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+    body: JSON.stringify({ model: 'dall-e-3', prompt, n: 1, size: dalleSize, response_format: 'b64_json' })
+  });
+  if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || `API 錯誤 ${res.status}`); }
+  const data = await res.json();
+  return data.data[0].b64_json;
+}
+
+async function generateImage(prompt, refBase64s) {
+  if (currentEngine === 'dalle') {
+    const key = document.getElementById('openaiKey').value.trim();
+    if (!key) throw new Error('請輸入 OpenAI API Key');
+    return await callDalle(prompt, key);
+  } else {
+    const key = document.getElementById('apiKey').value.trim();
+    if (!key) throw new Error('請輸入 Gemini API Key');
+    return await callGemini(prompt, key, refBase64s);
+  }
 }
 
 function getTextColor(setting) {
@@ -654,8 +811,6 @@ function setFailed(i, msg) {
 }
 
 async function regenOne(i) {
-  const key = document.getElementById('apiKey').value.trim();
-  if (!key || key.length < 10) { alert('請先輸入 API Key'); return; }
   const main = document.querySelectorAll('.main-copy')[i]?.value.trim() || '';
   const sub = document.querySelectorAll('.sub-copy')[i]?.value.trim() || '';
   const scenePrompt = document.getElementById(`prompt-${i}`)?.value.trim() || '';
@@ -664,7 +819,7 @@ async function regenOne(i) {
   setLoading(i);
   log(`重新生成第 ${i+1} 張...`);
   try {
-    const b64 = await callGemini(fullPrompt, key, refBase64s);
+    const b64 = await generateImage(fullPrompt, refBase64s);
     const url = await addText(b64, main, sub);
     setResult(i, url);
     log(`第 ${i+1} 張完成。`);
@@ -700,8 +855,6 @@ async function downloadAllAsZip() {
 }
 
 async function startGeneration() {
-  const key = document.getElementById('apiKey').value.trim();
-  if (!key || key.length < 10) { showError('請輸入有效的 API Key'); return; }
   const count = parseInt(document.getElementById('slideCount').value);
   const mains = [...document.querySelectorAll('.main-copy')].map(e => e.value.trim());
   const subs = [...document.querySelectorAll('.sub-copy')].map(e => e.value.trim());
@@ -713,6 +866,10 @@ async function startGeneration() {
   generatedImages = new Array(count).fill(null);
   renderResultSlots(count);
 
+  // 自動翻譯：有中文但沒英文的欄位先翻譯
+  log('檢查並翻譯中文 Prompt...');
+  await translateAllEmpty();
+
   let ok = 0;
   for (let i = 0; i < count; i++) {
     setLoading(i);
@@ -722,7 +879,7 @@ async function startGeneration() {
       const scenePrompt = document.getElementById(`prompt-${i}`)?.value.trim() || '';
       const fullPrompt = `${currentStyle}, no text overlay, no watermark. ${scenePrompt}`;
       const refBase64s = await getRefBase64s(i);
-      const b64 = await callGemini(fullPrompt, key, refBase64s);
+      const b64 = await generateImage(fullPrompt, refBase64s);
       log(`第 ${i+1} 張完成，壓字中...`);
       const url = await addText(b64, mains[i], subs[i]);
       setResult(i, url);
