@@ -206,7 +206,7 @@
       </div>
       <div>
         <div style="font-size:12px;font-weight:700;margin-bottom:10px;">🎨 生圖風格</div>
-        <div class="option-grid cols-3" id="styleGrid">
+        <div class="option-grid cols-4" id="styleGrid" style="grid-template-columns: repeat(4, 1fr)">
           <div class="option-btn active" onclick="selectStyle(this,'2D flat anime illustration, Japanese Q-version cute style, soft pastel color palette, clean lineart, minimal shading, warm cozy colors')">
             <span class="icon">🌸</span><span class="label">柔和日系</span><span class="sub">Q版粉彩平塗</span>
           </div>
@@ -240,36 +240,95 @@
           <div class="option-btn" onclick="selectStyle(this,'Pixar-inspired 3D animation style, warm expressive characters, rich detailed environments, cinematic lighting, emotional storytelling atmosphere, smooth organic surfaces, vibrant yet natural color palette')">
             <span class="icon">🎬</span><span class="label">3D寫實動畫</span><span class="sub">Pixar質感</span>
           </div>
+          <div class="option-btn" onclick="selectStyle(this,'minimalist typography poster design, clean white or cream background, elegant Chinese and English text layout, subtle geometric decorative elements, high-end brand editorial feel, no characters no people, text-focused composition')">
+            <span class="icon">🔤</span><span class="label">簡約文字排版</span><span class="sub">無人物純文字</span>
+          </div>
+          <div class="option-btn" onclick="selectStyle(this,'high-end skincare product photography, clean white or soft gradient background, professional studio lighting with soft shadows, elegant prop styling with flowers or fabric, macro detail shots, premium brand aesthetic, no people')">
+            <span class="icon">🧴</span><span class="label">品牌產品特寫</span><span class="sub">純商品電商圖</span>
+          </div>
+          <div class="option-btn" onclick="selectStyle(this,'photorealistic portrait photography, natural soft studio lighting, East Asian female model aged 30-45, warm skin tones, professional makeup, elegant casual outfit, shallow depth of field, high resolution commercial photography')">
+            <span class="icon">📸</span><span class="label">寫實人像攝影</span><span class="sub">商業寫真風</span>
+          </div>
+          <div class="option-btn" onclick="selectStyle(this,'lifestyle photography, morning skincare routine at home, warm natural window light, cozy bedroom or bathroom setting, East Asian woman aged 30-45, authentic candid feel, soft golden hour lighting')">
+            <span class="icon">🌅</span><span class="label">生活情境攝影</span><span class="sub">居家保養場景</span>
+          </div>
+          <div class="option-btn" onclick="selectStyle(this,'flat lay photography, overhead bird-eye view shot, clean white marble or linen background, skincare products arranged with dried flowers, green leaves, soft fabric, minimal elegant composition, no people')">
+            <span class="icon">🌿</span><span class="label">植物系平鋪</span><span class="sub">俯拍花草風</span>
+          </div>
+          <div class="option-btn" onclick="selectStyle(this,'outdoor street style photography, urban city background, East Asian woman aged 30-45, natural daylight, candid editorial feel, modern casual fashion, shallow depth of field')">
+            <span class="icon">🏙️</span><span class="label">戶外街拍風</span><span class="sub">時尚外景感</span>
+          </div>
+          <div class="option-btn" onclick="selectStyle(this,'bathroom lifestyle photography, soft warm ambient lighting, spa and wellness atmosphere, clean white tiles or wooden elements, skincare products on bathroom shelf, steamy dreamy feel, no people')">
+            <span class="icon">🛁</span><span class="label">浴室情境攝影</span><span class="sub">Spa氛圍感</span>
+          </div>
+          <div class="option-btn" onclick="selectStyle(this,'e-commerce product photography, pure white background, clean professional studio lighting, skincare product centered, sharp focus on product details, no shadows, no people, commercial catalog style')">
+            <span class="icon">🛒</span><span class="label">電商白底圖</span><span class="sub">蝦皮商品主圖</span>
+          </div>
+          <div class="option-btn" onclick="selectStyle(this,'luxury gift set packaging photography, elegant ribbon and gift box styling, soft warm background, premium skincare products arranged beautifully, festive yet refined atmosphere, no people')">
+            <span class="icon">🎁</span><span class="label">禮盒包裝展示</span><span class="sub">節日禮盒感</span>
+          </div>
+          <div class="option-btn" onclick="selectStyle(this,'wide format social media banner, horizontal composition 16:9, clean modern commercial photography, bold visual impact, skincare brand lifestyle scene, suitable for Facebook and Instagram advertising')">
+            <span class="icon">📱</span><span class="label">社群廣告橫幅</span><span class="sub">FB廣告橫向</span>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- 品牌 + 文字設定 -->
+  <!-- 文字設定 -->
   <div class="card">
     <h2>Step 3 — 文字設定</h2>
-    <div class="text-settings">
-      <div style="display:none;">
-        <label style="font-size:11px;color:var(--gray);display:block;margin-bottom:4px;">品牌名稱（Logo 已自動壓入，此欄位停用）</label>
-        <input type="text" id="brandName" value="" />
+    <div style="display:none;">
+      <input type="text" id="brandName" value="" />
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--rose);margin-bottom:10px;letter-spacing:1px;">主標題</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div>
+            <label style="font-size:11px;color:var(--gray);display:block;margin-bottom:4px;">字型</label>
+            <select id="mainFontStyle">
+              <option value="900 46px 'Noto Sans TC'">黑體 Bold</option>
+              <option value="700 44px 'Noto Serif TC'">明體 Bold</option>
+              <option value="400 44px 'Noto Serif TC'">明體 Regular</option>
+              <option value="300 44px 'Noto Sans TC'">黑體 Light</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--gray);display:block;margin-bottom:4px;">顏色</label>
+            <select id="mainTextColor">
+              <option value="white">白色</option>
+              <option value="black">黑色</option>
+              <option value="rose">玫瑰紅</option>
+              <option value="cream">奶油色</option>
+              <option value="yellow">明黃色</option>
+            </select>
+          </div>
+        </div>
       </div>
       <div>
-        <label style="font-size:11px;color:var(--gray);display:block;margin-bottom:4px;">文字字型</label>
-        <select id="fontStyle">
-          <option value="900 46px 'Noto Sans TC'">黑體 Bold（現在）</option>
-          <option value="400 44px 'Noto Serif TC'">明體 Regular</option>
-          <option value="700 44px 'Noto Serif TC'">明體 Bold</option>
-          <option value="300 44px 'Noto Sans TC'">黑體 Light</option>
-        </select>
-      </div>
-      <div>
-        <label style="font-size:11px;color:var(--gray);display:block;margin-bottom:4px;">文字顏色</label>
-        <select id="textColor">
-          <option value="white">白色（預設）</option>
-          <option value="black">黑色</option>
-          <option value="rose">玫瑰紅</option>
-          <option value="cream">奶油色</option>
-        </select>
+        <div style="font-size:11px;font-weight:700;color:var(--gray);margin-bottom:10px;letter-spacing:1px;">副標題</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div>
+            <label style="font-size:11px;color:var(--gray);display:block;margin-bottom:4px;">字型</label>
+            <select id="subFontStyle">
+              <option value="400 44px 'Noto Sans TC'">黑體 Regular</option>
+              <option value="300 44px 'Noto Sans TC'">黑體 Light</option>
+              <option value="400 44px 'Noto Serif TC'">明體 Regular</option>
+              <option value="700 44px 'Noto Serif TC'">明體 Bold</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--gray);display:block;margin-bottom:4px;">顏色</label>
+            <select id="subTextColor">
+              <option value="white">白色</option>
+              <option value="black">黑色</option>
+              <option value="rose">玫瑰紅</option>
+              <option value="cream">奶油色</option>
+              <option value="yellow">明黃色</option>
+            </select>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -796,7 +855,7 @@ async function generateImage(prompt, refBase64s) {
 }
 
 function getTextColor(setting) {
-  const colors = { white: '#ffffff', black: '#222222', rose: '#c9747a', cream: '#fdf6f0' };
+  const colors = { white: '#ffffff', black: '#222222', rose: '#c9747a', cream: '#fdf6f0', yellow: '#f5e642' };
   return colors[setting] || '#ffffff';
 }
 
@@ -834,20 +893,18 @@ async function addText(b64, main, sub) {
       // 底部遮罩移除
 
       const brand = document.getElementById('brandName').value || '';
-      const fontStyle = document.getElementById('fontStyle').value;
-      const textColor = getTextColor(document.getElementById('textColor').value);
       const cx = currentW / 2;
       const maxTextWidth = currentW * 0.88;
 
-      // ===== Logo 壓入（右下角，自動去黑色背景）=====
+      // ===== Logo 壓入（左上角，自動去黑色背景）=====
       const logoImg = new Image();
       logoImg.onload = () => {
-        const logoW = Math.round(currentW * 0.22);       // 圖寬 22%
+        const logoW = Math.round(currentW * 0.22);
         const logoH = Math.round(logoW * (logoImg.naturalHeight / logoImg.naturalWidth));
-        const logoX = Math.round(currentW * 0.03);        // 左邊距 3%
-        const logoY = Math.round(currentH * 0.03);        // 上邊距 3%
+        const logoX = Math.round(currentW * 0.03);
+        const logoY = Math.round(currentH * 0.03);
 
-        // 先加半透明深色底（讓白色 Logo 在淺色圖上可見）
+        // 半透明深色底（讓白色 Logo 可見）
         ctx.fillStyle = 'rgba(0,0,0,0.28)';
         ctx.beginPath();
         ctx.roundRect(logoX - 10, logoY - 6, logoW + 20, logoH + 12, 6);
@@ -856,22 +913,25 @@ async function addText(b64, main, sub) {
         drawLogoWithRemoveBg(ctx, logoImg, logoX, logoY, logoW, logoH);
 
         // ===== 文字壓入 =====
-        // 主文案 + 副文案：整體從底部往上計算，兩者緊貼
+        const mainFontStyle = document.getElementById('mainFontStyle').value;
+        const subFontStyle = document.getElementById('subFontStyle').value;
+        const mainColor = getTextColor(document.getElementById('mainTextColor').value);
+        const subColor = getTextColor(document.getElementById('subTextColor').value);
         const mainSize = hasMain ? Math.round(currentW * 0.053) : 0;
         const subSize = hasSub ? Math.round(currentW * 0.034) : 0;
         const mainLineH = mainSize * 0.94;
         const subLineH = subSize * 0.94;
-        const gap = 0; // 主副文案直接緊貼，無間距
+        const gap = 0;
 
         // 先計算各自行數
         let mainLines = [];
         let subLines = [];
         if (hasMain) {
-          ctx.font = fontStyle.replace('46px', `${mainSize}px`);
+          ctx.font = mainFontStyle.replace('46px', `${mainSize}px`);
           mainLines = wrapText(ctx, main, maxTextWidth);
         }
         if (hasSub) {
-          ctx.font = `400 ${subSize}px 'Noto Sans TC',sans-serif`;
+          ctx.font = subFontStyle.replace('44px', `${subSize}px`);
           subLines = wrapText(ctx, sub, maxTextWidth);
         }
 
@@ -883,14 +943,14 @@ async function addText(b64, main, sub) {
 
         // 畫主文案（加描邊提升可讀性）
         if (hasMain) {
-          ctx.font = fontStyle.replace('46px', `${mainSize}px`);
+          ctx.font = mainFontStyle.replace('46px', `${mainSize}px`);
           ctx.textAlign = 'center';
           ctx.strokeStyle = 'rgba(0,0,0,0.75)';
           ctx.lineWidth = Math.round(mainSize * 0.12);
           ctx.lineJoin = 'round';
           mainLines.forEach(line => {
             ctx.strokeText(line, cx, curY);
-            ctx.fillStyle = textColor; ctx.fillText(line, cx, curY);
+            ctx.fillStyle = mainColor; ctx.fillText(line, cx, curY);
             curY += mainLineH;
           });
         }
@@ -898,14 +958,14 @@ async function addText(b64, main, sub) {
         // 畫副文案（緊接主文案）
         if (hasSub) {
           curY += gap;
-          ctx.font = `400 ${subSize}px 'Noto Sans TC',sans-serif`;
+          ctx.font = subFontStyle.replace('44px', `${subSize}px`);
           ctx.textAlign = 'center';
           ctx.strokeStyle = 'rgba(0,0,0,0.65)';
           ctx.lineWidth = Math.round(subSize * 0.12);
           ctx.lineJoin = 'round';
           subLines.forEach(line => {
             ctx.strokeText(line, cx, curY);
-            ctx.fillStyle = textColor === '#ffffff' ? 'rgba(255,255,255,0.92)' : textColor;
+            ctx.fillStyle = subColor === '#ffffff' ? 'rgba(255,255,255,0.92)' : subColor;
             ctx.fillText(line, cx, curY);
             curY += subLineH;
           });
