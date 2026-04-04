@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KOCSKIN 社群圖片生成器 v8</title>
+<title>KOCSKIN 社群圖片生成器 v9</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;700;900&family=Noto+Serif+TC:wght@400;700&display=swap');
   :root { --rose: #c9747a; --rose-light: #f5e8e8; --cream: #fdf6f0; --dark: #2a1f1f; --gray: #888; --border: #e8d5d5; }
@@ -93,7 +93,7 @@
     <div class="logo-zh">克麗詩黛</div>
   </div>
   <div class="divider"></div>
-  <div class="title">社群圖片生成器 v8 <span class="badge">Gemini API</span> <span class="badge" style="background:#34a853;">中文Prompt</span></div>
+  <div class="title">社群圖片生成器 v9 <span class="badge">Gemini API</span> <span class="badge" style="background:#34a853;">中文Prompt</span></div>
 </header>
 
 <div class="container">
@@ -101,7 +101,7 @@
   <!-- API Key + 引擎選擇 -->
   <div class="card">
     <h2>Step 1 — API Key ＆ 生圖引擎</h2>
-    <div class="warning-box">⚠️ Key 只在瀏覽器內使用，不會被儲存。<br>📌 <strong>請先填入 Gemini API Key，翻譯與生圖功能都需要此 Key，填完再進行後續步驟。</strong></div>
+    <div class="warning-box">⚠️ Key 只在瀏覽器內使用，不會被儲存。</div>
 
     <!-- 引擎選擇 -->
     <div style="margin-bottom:16px;">
@@ -168,6 +168,13 @@
       </button>
     </div>
     <div id="notionMsg" style="font-size:12px;color:var(--gray);margin-top:6px;"></div>
+    <div id="notionAutoUpdateSection" style="display:none;margin-top:10px;padding:10px 14px;background:var(--rose-light);border-radius:8px;border:1px solid var(--border);">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <input type="checkbox" id="autoUpdateNotion" style="width:auto;accent-color:var(--rose);" />
+        <label for="autoUpdateNotion" style="font-size:12px;color:var(--dark);margin:0;cursor:pointer;">生成完成後自動更新 Notion 劇本狀態為「已生成」</label>
+      </div>
+      <div id="loadedScriptId" style="font-size:11px;color:var(--gray);margin-top:5px;"></div>
+    </div>
   </div>
 
   <!-- 尺寸 + 風格 -->
@@ -307,6 +314,7 @@ let currentW = 1080, currentH = 1080;
 let generatedImages = [];
 let notionScripts = [];
 let currentEngine = 'gemini'; // 'gemini' or 'dalle'
+let loadedNotionPageId = null; // 目前選擇的劇本 Notion Page ID
 
 // ===== 引擎切換 =====
 function selectEngine(engine) {
@@ -358,6 +366,8 @@ async function loadNotionScripts() {
 
     document.getElementById('notionScriptList').style.display = 'block';
     document.getElementById('notionMsg').textContent = `✅ 載入 ${notionScripts.length} 個劇本`;
+    document.getElementById('notionAutoUpdateSection').style.display = 'block';
+    document.getElementById('loadedScriptId').textContent = '選擇劇本後會自動記錄對應 ID';
   } catch(e) {
     document.getElementById('notionMsg').textContent = `❌ 失敗：${e.message}`;
   }
@@ -368,9 +378,14 @@ function applyScript() {
   if (idx === '') {
     document.getElementById('scriptPreview').style.display = 'none';
     document.getElementById('applyScriptBtn').style.display = 'none';
+    document.getElementById('loadedScriptId').textContent = '選擇劇本後會自動記錄對應 ID';
+    loadedNotionPageId = null;
     return;
   }
   const page = notionScripts[parseInt(idx)];
+  // 記錄目前選擇的劇本 Page ID，供生成後更新狀態用
+  loadedNotionPageId = page.id;
+  document.getElementById('loadedScriptId').textContent = `已選劇本 ID：${page.id}`;
   const props = page.properties;
   const get = (key) => props[key]?.rich_text?.[0]?.plain_text || props[key]?.title?.[0]?.plain_text || '';
 
@@ -451,43 +466,36 @@ function applyScriptToForm() {
     renderSlides();
   }
 
-  // 第一步：等 DOM 就緒後填入所有文案和英文 Prompt
-  setTimeout(() => {
+  // 填入文案和 Prompt，並自動將英文翻成中文填入左欄
+  setTimeout(async () => {
     const mains = document.querySelectorAll('.main-copy');
     const subs = document.querySelectorAll('.sub-copy');
     const prompts = document.querySelectorAll('.scene-prompt');
     for (let i = 1; i <= 5; i++) {
       if (mains[i-1]) mains[i-1].value = get(`第${i}張主文案`);
       if (subs[i-1]) subs[i-1].value = get(`第${i}張副文案`);
-      if (prompts[i-1]) prompts[i-1].value = get(`第${i}張Prompt`);
-    }
-    document.getElementById('notionMsg').textContent = '✅ 劇本已套用，翻譯中文說明中...';
-
-    // 第二步：DOM 填完後再逐張翻譯，給額外 200ms 確保 DOM 穩定
-    setTimeout(async () => {
-      for (let i = 0; i < count; i++) {
-        const enEl = document.getElementById(`prompt-${i}`);
-        const zhEl = document.getElementById(`prompt-zh-${i}`);
-        const status = document.getElementById(`transStatus-${i}`);
-        const enPrompt = enEl?.value.trim();
-        if (zhEl && enPrompt) {
-          zhEl.value = '翻譯中...';
-          if (status) status.textContent = '⏳';
-          try {
-            const zh = await translateEnToZh(enPrompt);
-            zhEl.value = zh;
-            if (status) status.textContent = '✅ 已翻譯';
-          } catch(e) {
-            zhEl.value = '';
-            if (status) status.textContent = '❌ ' + e.message;
-          }
-        } else if (zhEl) {
+      const enPrompt = get(`第${i}張Prompt`);
+      if (prompts[i-1]) prompts[i-1].value = enPrompt;
+      // 左欄：自動翻譯英文 Prompt 成中文
+      const zhEl = document.getElementById(`prompt-zh-${i-1}`);
+      const status = document.getElementById(`transStatus-${i-1}`);
+      if (zhEl && enPrompt) {
+        zhEl.value = '翻譯中...';
+        if (status) status.textContent = '⏳';
+        try {
+          const zh = await translateEnToZh(enPrompt);
+          zhEl.value = zh;
+          if (status) status.textContent = '✅ 已翻譯';
+        } catch(e) {
           zhEl.value = '';
+          if (status) status.textContent = '❌ 翻譯失敗';
         }
+      } else if (zhEl) {
+        zhEl.value = '';
       }
-      document.getElementById('notionMsg').textContent = '✅ 劇本已套用，中文說明翻譯完成！';
-    }, 200);
-  }, 150);
+    }
+    document.getElementById('notionMsg').textContent = '✅ 劇本已套用，中文說明翻譯完成！';
+  }, 100);
 }
 // ===== Notion 串接結束 =====
 
@@ -621,11 +629,12 @@ async function getRefBase64s(i) {
 async function callGeminiText(prompt) {
   const key = document.getElementById('apiKey').value.trim();
   if (!key) throw new Error('請先填入 Gemini API Key');
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`, {
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }]
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { responseModalities: ['TEXT'] }
     })
   });
   if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || '翻譯失敗'); }
@@ -751,6 +760,24 @@ function getTextColor(setting) {
   return colors[setting] || '#ffffff';
 }
 
+// ===== 文字換行輔助函式 =====
+function wrapText(ctx, text, maxWidth) {
+  const chars = text.split('');
+  const lines = [];
+  let current = '';
+  for (const ch of chars) {
+    const test = current + ch;
+    if (ctx.measureText(test).width > maxWidth) {
+      lines.push(current);
+      current = ch;
+    } else {
+      current = test;
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+}
+
 async function addText(b64, main, sub) {
   return new Promise(resolve => {
     const img = new Image();
@@ -766,51 +793,65 @@ async function addText(b64, main, sub) {
 
       // 頂部遮罩（品牌名用）
       const topH = Math.round(currentH * 0.1);
-      const tg = ctx.createLinearGradient(0,0,0,topH);
-      tg.addColorStop(0,'rgba(0,0,0,0.5)'); tg.addColorStop(1,'rgba(0,0,0,0)');
-      ctx.fillStyle = tg; ctx.fillRect(0,0,currentW,topH);
+      const tg = ctx.createLinearGradient(0, 0, 0, topH);
+      tg.addColorStop(0, 'rgba(0,0,0,0.5)'); tg.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = tg; ctx.fillRect(0, 0, currentW, topH);
 
       // 底部遮罩（只在有文案時加）
       if (hasCopy) {
-        const botStart = Math.round(currentH * 0.62);
-        const bg = ctx.createLinearGradient(0,botStart,0,currentH);
-        bg.addColorStop(0,'rgba(0,0,0,0)'); bg.addColorStop(1,'rgba(0,0,0,0.78)');
-        ctx.fillStyle = bg; ctx.fillRect(0,botStart,currentW,currentH-botStart);
+        const botStart = Math.round(currentH * 0.55);
+        const bg = ctx.createLinearGradient(0, botStart, 0, currentH);
+        bg.addColorStop(0, 'rgba(0,0,0,0)'); bg.addColorStop(1, 'rgba(0,0,0,0.78)');
+        ctx.fillStyle = bg; ctx.fillRect(0, botStart, currentW, currentH - botStart);
       }
 
       const brand = document.getElementById('brandName').value || '';
       const fontStyle = document.getElementById('fontStyle').value;
       const textColor = getTextColor(document.getElementById('textColor').value);
       const cx = currentW / 2;
-      const brandY = Math.round(currentH * 0.038);
-      const mainY = Math.round(currentH * 0.865);
-      const subY = Math.round(currentH * 0.915);
+      const maxTextWidth = currentW * 0.88;
 
-      // 品牌名（有填才顯示）
+      // 品牌名（頂部，單行）
       if (brand.trim()) {
         const brandSize = Math.round(currentW * 0.022);
+        const brandY = Math.round(currentH * 0.038);
         ctx.font = `400 ${brandSize}px 'Noto Sans TC',sans-serif`;
         ctx.textAlign = 'center';
-        ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillText(brand, cx+1, brandY+1);
+        ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillText(brand, cx + 1, brandY + 1);
         ctx.fillStyle = textColor; ctx.fillText(brand, cx, brandY);
       }
 
-      // 主文案（有填才顯示）
+      // 主文案（底部，支援換行）
       if (hasMain) {
-        ctx.font = fontStyle.replace('46px', `${Math.round(currentW*0.044)}px`);
+        const mainSize = Math.round(currentW * 0.044);
+        ctx.font = fontStyle.replace('46px', `${mainSize}px`);
         ctx.textAlign = 'center';
-        ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillText(main, cx+2, mainY+2);
-        ctx.fillStyle = textColor; ctx.fillText(main, cx, mainY);
+        const mainLines = wrapText(ctx, main, maxTextWidth);
+        const lineH = mainSize * 1.35;
+        const subReserve = hasSub ? Math.round(currentH * 0.07) : 0;
+        const blockH = mainLines.length * lineH;
+        let startY = currentH - subReserve - Math.round(currentH * 0.05) - blockH + lineH;
+        mainLines.forEach(line => {
+          ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillText(line, cx + 2, startY + 2);
+          ctx.fillStyle = textColor; ctx.fillText(line, cx, startY);
+          startY += lineH;
+        });
       }
 
-      // 副文案（有填才顯示）
+      // 副文案（底部最下方，支援換行）
       if (hasSub) {
         const subSize = Math.round(currentW * 0.028);
         ctx.font = `400 ${subSize}px 'Noto Sans TC',sans-serif`;
         ctx.textAlign = 'center';
-        ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillText(sub, cx+1, subY+1);
-        ctx.fillStyle = textColor === '#ffffff' ? 'rgba(255,255,255,0.88)' : textColor;
-        ctx.fillText(sub, cx, subY);
+        const subLines = wrapText(ctx, sub, maxTextWidth);
+        const lineH = subSize * 1.35;
+        let startY = currentH - Math.round(currentH * 0.025) - (subLines.length - 1) * lineH;
+        subLines.forEach(line => {
+          ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillText(line, cx + 1, startY + 1);
+          ctx.fillStyle = textColor === '#ffffff' ? 'rgba(255,255,255,0.88)' : textColor;
+          ctx.fillText(line, cx, startY);
+          startY += lineH;
+        });
       }
 
       resolve(c.toDataURL('image/png'));
@@ -818,6 +859,35 @@ async function addText(b64, main, sub) {
     img.src = 'data:image/png;base64,' + b64;
   });
 }
+
+// ===== Notion 劇本狀態自動更新 =====
+async function updateNotionScriptStatus(pageId, status) {
+  const token = document.getElementById('notionToken').value.trim();
+  const proxy = document.getElementById('notionProxy').value.trim();
+  if (!token || !proxy || !pageId) return;
+  try {
+    const res = await fetch(`${proxy}/v1/pages/${pageId}`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        properties: {
+          '狀態': { select: { name: status } }
+        }
+      })
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      console.warn('Notion 狀態更新失敗：', err?.message);
+    }
+  } catch(e) {
+    console.warn('Notion 狀態更新錯誤：', e.message);
+  }
+}
+// ===== Notion 狀態更新結束 =====
 
 function setLoading(i) {
   document.getElementById(`result-${i}`).innerHTML = `<div class="result-placeholder"><div class="spinner"></div><div style="font-size:10px;margin-top:4px;">生成中...</div></div>`;
@@ -926,6 +996,13 @@ async function startGeneration() {
   log(`完成！成功 ${ok}/${count} 張。`);
   document.getElementById('generateBtn').disabled = false;
   checkAllDone();
+
+  // 自動更新 Notion 劇本狀態
+  if (ok > 0 && document.getElementById('autoUpdateNotion')?.checked && loadedNotionPageId) {
+    log('更新 Notion 劇本狀態...');
+    await updateNotionScriptStatus(loadedNotionPageId, '已生成');
+    log('✅ Notion 劇本狀態已更新為「已生成」');
+  }
 }
 
 // 初始化
