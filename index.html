@@ -480,21 +480,31 @@ function applyScriptToForm() {
       const zhEl = document.getElementById(`prompt-zh-${i-1}`);
       const status = document.getElementById(`transStatus-${i-1}`);
       if (zhEl && enPrompt) {
-        zhEl.value = '翻譯中...';
-        if (status) status.textContent = '⏳';
-        try {
-          const zh = await translateEnToZh(enPrompt);
-          zhEl.value = zh;
-          if (status) status.textContent = '✅ 已翻譯';
-        } catch(e) {
+        const hasKey = document.getElementById('apiKey')?.value.trim();
+        if (!hasKey) {
+          // 沒有 Key，跳過翻譯，顯示提示
           zhEl.value = '';
-          if (status) status.textContent = '❌ 翻譯失敗';
+          if (status) status.textContent = '⚠️ 填入 Key 後可翻譯';
+        } else {
+          zhEl.value = '翻譯中...';
+          if (status) status.textContent = '⏳';
+          try {
+            const zh = await translateEnToZh(enPrompt);
+            zhEl.value = zh;
+            if (status) status.textContent = '✅ 已翻譯';
+          } catch(e) {
+            zhEl.value = '';
+            if (status) status.textContent = `❌ ${e.message.substring(0, 30)}`;
+          }
         }
       } else if (zhEl) {
         zhEl.value = '';
       }
     }
-    document.getElementById('notionMsg').textContent = '✅ 劇本已套用，中文說明翻譯完成！';
+    const hasKey = document.getElementById('apiKey')?.value.trim();
+    document.getElementById('notionMsg').textContent = hasKey
+      ? '✅ 劇本已套用，中文說明翻譯完成！'
+      : '✅ 劇本已套用（請填入 Gemini Key 後點「翻譯 →」補譯中文說明）';
   }, 100);
 }
 // ===== Notion 串接結束 =====
