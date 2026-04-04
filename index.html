@@ -625,19 +625,21 @@ async function getRefBase64s(i) {
   return results;
 }
 
-// ===== 中文 → 英文翻譯（用 Claude API）=====
+// ===== 中文 → 英文翻譯（Gemini 純文字）=====
 async function callGeminiText(prompt) {
   const key = document.getElementById('apiKey').value.trim();
   if (!key) throw new Error('請先填入 Gemini API Key');
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`, {
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { responseModalities: ['TEXT'] }
+      contents: [{ parts: [{ text: prompt }] }]
     })
   });
-  if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || '翻譯失敗'); }
+  if (!res.ok) {
+    const e = await res.json();
+    throw new Error(e.error?.message || '翻譯失敗');
+  }
   const data = await res.json();
   return (data.candidates?.[0]?.content?.parts || []).find(p => p.text)?.text?.trim() || '';
 }
