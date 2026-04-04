@@ -808,13 +808,7 @@ async function addText(b64, main, sub) {
       const hasSub = sub && sub.trim() !== '';
       const hasCopy = hasMain || hasSub;
 
-      // 底部遮罩（只在有文案時加）
-      if (hasCopy) {
-        const botStart = Math.round(currentH * 0.55);
-        const bg = ctx.createLinearGradient(0, botStart, 0, currentH);
-        bg.addColorStop(0, 'rgba(0,0,0,0)'); bg.addColorStop(1, 'rgba(0,0,0,0.78)');
-        ctx.fillStyle = bg; ctx.fillRect(0, botStart, currentW, currentH - botStart);
-      }
+      // 底部遮罩移除
 
       const brand = document.getElementById('brandName').value || '';
       const fontStyle = document.getElementById('fontStyle').value;
@@ -827,8 +821,8 @@ async function addText(b64, main, sub) {
       logoImg.onload = () => {
         const logoW = Math.round(currentW * 0.22);       // 圖寬 22%
         const logoH = Math.round(logoW * (logoImg.naturalHeight / logoImg.naturalWidth));
-        const logoX = currentW - logoW - Math.round(currentW * 0.03); // 右邊距 3%
-        const logoY = currentH - logoH - Math.round(currentH * 0.03); // 下邊距 3%
+        const logoX = Math.round(currentW * 0.03);        // 左邊距 3%
+        const logoY = Math.round(currentH * 0.03);        // 上邊距 3%
 
         // 先加半透明深色底（讓白色 Logo 在淺色圖上可見）
         ctx.fillStyle = 'rgba(0,0,0,0.28)';
@@ -839,36 +833,58 @@ async function addText(b64, main, sub) {
         drawLogoWithRemoveBg(ctx, logoImg, logoX, logoY, logoW, logoH);
 
         // ===== 文字壓入 =====
-        // 主文案（底部，支援換行）
+        // 主文案 + 副文案：整體從底部往上計算，兩者緊貼
+        const mainSize = hasMain ? Math.round(currentW * 0.053) : 0;
+        const subSize = hasSub ? Math.round(currentW * 0.034) : 0;
+        const mainLineH = mainSize * 0.94;
+        const subLineH = subSize * 0.94;
+        const gap = 0; // 主副文案直接緊貼，無間距
+
+        // 先計算各自行數
+        let mainLines = [];
+        let subLines = [];
         if (hasMain) {
-          const mainSize = Math.round(currentW * 0.044);
+          ctx.font = fontStyle.replace('46px', `${mainSize}px`);
+          mainLines = wrapText(ctx, main, maxTextWidth);
+        }
+        if (hasSub) {
+          ctx.font = `400 ${subSize}px 'Noto Sans TC',sans-serif`;
+          subLines = wrapText(ctx, sub, maxTextWidth);
+        }
+
+        // 整體文字區塊高度
+        const totalH = (mainLines.length * mainLineH) + gap + (subLines.length * subLineH);
+        // 整體從距底部 12% 開始往上（離底部更遠）
+        const blockBottom = currentH - Math.round(currentH * 0.12);
+        let curY = blockBottom - totalH + mainLineH;
+
+        // 畫主文案（加描邊提升可讀性）
+        if (hasMain) {
           ctx.font = fontStyle.replace('46px', `${mainSize}px`);
           ctx.textAlign = 'center';
-          const mainLines = wrapText(ctx, main, maxTextWidth);
-          const lineH = mainSize * 1.35;
-          const subReserve = hasSub ? Math.round(currentH * 0.07) : 0;
-          const blockH = mainLines.length * lineH;
-          let startY = currentH - subReserve - Math.round(currentH * 0.05) - blockH + lineH;
+          ctx.strokeStyle = 'rgba(0,0,0,0.75)';
+          ctx.lineWidth = Math.round(mainSize * 0.12);
+          ctx.lineJoin = 'round';
           mainLines.forEach(line => {
-            ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillText(line, cx + 2, startY + 2);
-            ctx.fillStyle = textColor; ctx.fillText(line, cx, startY);
-            startY += lineH;
+            ctx.strokeText(line, cx, curY);
+            ctx.fillStyle = textColor; ctx.fillText(line, cx, curY);
+            curY += mainLineH;
           });
         }
 
-        // 副文案（底部最下方，支援換行）
+        // 畫副文案（緊接主文案）
         if (hasSub) {
-          const subSize = Math.round(currentW * 0.028);
+          curY += gap;
           ctx.font = `400 ${subSize}px 'Noto Sans TC',sans-serif`;
           ctx.textAlign = 'center';
-          const subLines = wrapText(ctx, sub, maxTextWidth);
-          const lineH = subSize * 1.35;
-          let startY = currentH - Math.round(currentH * 0.025) - (subLines.length - 1) * lineH;
+          ctx.strokeStyle = 'rgba(0,0,0,0.65)';
+          ctx.lineWidth = Math.round(subSize * 0.12);
+          ctx.lineJoin = 'round';
           subLines.forEach(line => {
-            ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillText(line, cx + 1, startY + 1);
-            ctx.fillStyle = textColor === '#ffffff' ? 'rgba(255,255,255,0.88)' : textColor;
-            ctx.fillText(line, cx, startY);
-            startY += lineH;
+            ctx.strokeText(line, cx, curY);
+            ctx.fillStyle = textColor === '#ffffff' ? 'rgba(255,255,255,0.92)' : textColor;
+            ctx.fillText(line, cx, curY);
+            curY += subLineH;
           });
         }
 
@@ -941,7 +957,7 @@ function setResult(i, url) {
     <span class="slide-num">0${i+1}</span>
     <img src="${url}" />
     <button class="regen-btn" onclick="regenOne(${i})" style="display:block">🔄 重生</button>
-    <button class="dl-btn" onclick="dl('${url}','slide_0${i+1}.png')">下載</button>`;
+    <button class="dl-btn" onclick="dl('${url}','slide_0${i+1}.jpg')">下載</button>`;
 }
 
 function setFailed(i, msg) {
@@ -988,7 +1004,7 @@ async function downloadAllAsZip() {
   const folder = zip.folder('KOCSKIN_社群圖片');
   for (let i = 0; i < generatedImages.length; i++) {
     if (generatedImages[i]) {
-      folder.file(`slide_0${i+1}.png`, generatedImages[i].split(',')[1], { base64: true });
+      folder.file(`slide_0${i+1}.jpg`, generatedImages[i].split(',')[1], { base64: true });
     }
   }
   const blob = await zip.generateAsync({ type: 'blob' });
